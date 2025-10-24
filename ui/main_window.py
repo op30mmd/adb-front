@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                              QMessageBox, QListWidget, QGroupBox, QTableWidget,
                              QTableWidgetItem, QHeaderView, QInputDialog, QApplication)
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont, QColor, QPalette, QIcon, QTextCharFormat
+from PyQt6.QtGui import QFont, QColor, QPalette, QIcon, QTextCharFormat, QTextCursor
 
 from adb_manager.adb_actions import ADBCore
 
@@ -632,7 +632,7 @@ class ADBManager(QMainWindow):
 
     def handle_shell_output(self, output):
         """Append shell output to the text edit."""
-        self.shell_output.moveCursor(self.shell_output.textCursor().End)
+        self.shell_output.moveCursor(QTextCursor.MoveOperation.End)
         self.shell_output.insertPlainText(output)
 
     def execute_shell_command(self):
