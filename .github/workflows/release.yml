@@ -50,9 +50,9 @@ jobs:
       - name: Create Linux packages
         if: runner.os == 'Linux'
         run: |
-          mkdir -p dist/packages
-          fpm -s file -t deb -n adb-front -v 1.0 -C dist/ --description "A PyQt6 GUI for Android Debug Bridge" -p dist/packages/adb-front_1.0_amd64.deb adb
-          fpm -s file -t rpm -n adb-front -v 1.0 -C dist/ --description "A PyQt6 GUI for Android Debug Bridge" -p dist/packages/adb-front-1.0.x86_64.rpm adb
+          mkdir -p dist/linux
+          fpm -s dir -t deb -n adb-front -v 1.0 -p dist/linux/adb-front_1.0_amd64.deb -C dist adb
+          fpm -s dir -t rpm -n adb-front -v 1.0 -p dist/linux/adb-front-1.0.x86_64.rpm -C dist adb
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -61,8 +61,7 @@ jobs:
           path: |
             dist/adb.exe
             dist/adb.app
-            dist/packages/*.deb
-            dist/packages/*.rpm
+            dist/linux/
             dist/adb
 
   release:
@@ -77,7 +76,7 @@ jobs:
 
       - name: Generate release tag
         id: tag
-        run: echo "::set-output name=tag::release-$(date +'%Y-%m-%d-%H%M%S')"
+        run: echo "tag=release-$(date +'%Y-%m-%d-%H%M%S')" >> $GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
