@@ -2,6 +2,7 @@
 
 import sys
 import multiprocessing
+import os
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import QLockFile, QDir
