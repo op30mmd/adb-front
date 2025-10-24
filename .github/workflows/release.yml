@@ -50,8 +50,9 @@ jobs:
       - name: Create Linux packages
         if: runner.os == 'Linux'
         run: |
-          fpm -s dir -t deb -n adb-front -v 1.0 -C dist/adb --description "A PyQt6 GUI for Android Debug Bridge" -p adb-front_1.0_amd64.deb
-          fpm -s dir -t rpm -n adb-front -v 1.0 -C dist/adb --description "A PyQt6 GUI for Android Debug Bridge" -p adb-front-1.0.x86_64.rpm
+          mkdir -p dist/packages
+          fpm -s file -t deb -n adb-front -v 1.0 -C dist/ --description "A PyQt6 GUI for Android Debug Bridge" -p dist/packages/adb-front_1.0_amd64.deb adb
+          fpm -s file -t rpm -n adb-front -v 1.0 -C dist/ --description "A PyQt6 GUI for Android Debug Bridge" -p dist/packages/adb-front-1.0.x86_64.rpm adb
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -60,8 +61,8 @@ jobs:
           path: |
             dist/adb.exe
             dist/adb.app
-            *.deb
-            *.rpm
+            dist/packages/*.deb
+            dist/packages/*.rpm
             dist/adb
 
   release:
