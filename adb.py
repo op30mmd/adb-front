@@ -24,8 +24,7 @@ def setup_logging():
         level=logging.DEBUG,
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler(sys.stdout)
+            logging.FileHandler(log_file)
         ]
     )
     logging.info("ADB Manager application started.")
