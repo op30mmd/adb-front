@@ -49,30 +49,35 @@ jobs:
       - name: Run PyInstaller
         run: pyinstaller adb.spec --noconfirm
 
+      - name: Compress macOS artifact
+        if: runner.os == 'macOS'
+        run: zip -r adb-front-macos-arm64.zip dist/adb.app
+
       - name: Compress with 7-Zip (Windows)
         if: runner.os == 'Windows'
-        run: 7z a -m0=lzma2 -mx=9 adb-front-windows.7z dist/adb.exe
+        run: 7z a -m0=lzma2 -mx=9 adb-front-windows-x64.7z dist/adb.exe
 
       - name: Create Linux packages
         if: runner.os == 'Linux'
         run: |
           mkdir -p dist/linux
-          fpm -s dir -t deb -n adb-front -v 1.0 -p dist/linux/adb-front_1.0_amd64.deb -C dist adb
-          fpm -s dir -t rpm -n adb-front -v 1.0 -p dist/linux/adb-front-1.0.x86_64.rpm -C dist adb
+          mv dist/adb dist/adb-front-linux-x64
+          fpm -s dir -t deb -n adb-front -v 1.0 -p dist/linux/adb-front-linux-x64.deb -C dist adb-front-linux-x64
+          fpm -s dir -t rpm -n adb-front -v 1.0 -p dist/linux/adb-front-linux-x64.rpm -C dist adb-front-linux-x64
 
       - name: Upload Windows artifact
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: adb-front-Windows
-          path: adb-front-windows.7z
+          path: adb-front-windows-x64.7z
 
       - name: Upload macOS artifact
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
           name: adb-front-macOS
-          path: dist/adb.app
+          path: adb-front-macos-arm64.zip
 
       - name: Upload Linux artifacts
         if: runner.os == 'Linux'
@@ -81,7 +86,7 @@ jobs:
           name: adb-front-Linux
           path: |
             dist/linux/
-            dist/adb
+            dist/adb-front-linux-x64
 
   release:
     name: Create Release
@@ -111,10 +116,10 @@ jobs:
             Automated release of adb-front.
             ${{ github.event.head_commit.message }}
           files: |
-            artifacts/adb-front-Windows/adb-front-windows.7z
-            artifacts/adb-front-macOS/adb.app
-            artifacts/adb-front-Linux/linux/*.deb
-            artifacts/adb-front-Linux/linux/*.rpm
-            artifacts/adb-front-Linux/adb
+            artifacts/adb-front-Windows/adb-front-windows-x64.7z
+            artifacts/adb-front-macOS/adb-front-macos-arm64.zip
+            artifacts/adb-front-Linux/linux/adb-front-linux-x64.deb
+            artifacts/adb-front-Linux/linux/adb-front-linux-x64.rpm
+            artifacts/adb-front-Linux/adb-front-linux-x64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
