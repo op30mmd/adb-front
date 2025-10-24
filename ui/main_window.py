@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import re
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QTabWidget, QPushButton, QLabel, 
                              QTextEdit, QLineEdit, QTreeWidget,
@@ -7,7 +8,7 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                              QMessageBox, QListWidget, QGroupBox, QTableWidget,
                              QTableWidgetItem, QHeaderView, QInputDialog, QApplication, QTreeWidgetItem)
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont, QColor, QPalette, QIcon
+from PyQt6.QtGui import QFont, QColor, QPalette, QIcon, QTextCharFormat
 
 from adb_manager.adb_actions import ADBCore
 
@@ -732,31 +733,18 @@ class ADBManager(QMainWindow):
                 self.show_error(str(e))
 
     def start_logcat(self):
-        if self.logcat_timer:
-            self.logcat_timer.stop()
         self.logcat_output.clear()
         try:
-            self.logcat_process = self.adb_core.start_logcat()
-            self.logcat_timer = QTimer()
-            self.logcat_timer.timeout.connect(self.read_logcat)
-            self.logcat_timer.start(100)
+            self.adb_core.start_logcat_thread(self.handle_logcat_line)
         except RuntimeError as e:
             self.show_error(str(e))
 
-    def read_logcat(self):
-        if self.logcat_process:
-            try:
-                line = self.logcat_process.stdout.readline()
-                if line:
-                    self.logcat_output.moveCursor(self.logcat_output.textCursor().End)
-                    self.logcat_output.insertPlainText(line)
-            except:
-                pass
+    def handle_logcat_line(self, line):
+        self.logcat_output.moveCursor(self.logcat_output.textCursor().End)
+        self.logcat_output.insertPlainText(line + '\n')
 
     def stop_logcat(self):
-        if self.logcat_timer:
-            self.logcat_timer.stop()
-        self.adb_core.stop_logcat()
+        self.adb_core.stop_logcat_thread()
 
     def clear_logcat(self):
         try:
@@ -770,8 +758,38 @@ class ADBManager(QMainWindow):
         search_text = self.logcat_search_input.text().lower()
         log_level = self.logcat_filter_combo.currentText()
 
-        # This is a placeholder for the filtering logic.
-        # A proper implementation would require parsing the log lines
-        # and showing/hiding them based on the filter criteria.
-        # For now, we just show a message.
-        self.show_message("Filter", "Logcat filtering is not yet implemented in this refactored version.")
+        cursor = self.logcat_output.textCursor()
+        cursor.select(QTextCursor.SelectionType.Document)
+        cursor.setCharFormat(QTextCharFormat())
+
+        if not search_text and log_level == "All":
+            return
+
+        cursor.beginEditBlock()
+        while not cursor.atEnd():
+            cursor.movePosition(QTextCursor.StartOfLine)
+            cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+            line = cursor.selectedText()
+
+            log_level_match = re.search(r' (V|D|I|W|E)/.*', line)
+            if log_level_match:
+                level = log_level_match.group(1)
+                color = {
+                    'V': QColor("gray"),
+                    'D': QColor("blue"),
+                    'I': QColor("green"),
+                    'W': QColor("orange"),
+                    'E': QColor("red"),
+                }.get(level, QColor("black"))
+
+                fmt = QTextCharFormat()
+                fmt.setForeground(color)
+                cursor.mergeCharFormat(fmt)
+
+            if (search_text and search_text not in line.lower()) or \
+               (log_level != "All" and log_level[0] != level):
+                cursor.removeSelectedText()
+
+            cursor.movePosition(QTextCursor.NextBlock)
+
+        cursor.endEditBlock()

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from adb_manager.adb_thread import ADBThread
 from adb_manager.interactive_shell_thread import InteractiveShellThread
+from adb_manager.logcat_thread import LogcatThread
 
 def get_adb_path():
     """Get the path to the bundled adb executable"""
@@ -20,9 +21,9 @@ class ADBCore:
         self.adb_path = get_adb_path()
         if not self.is_adb_available():
             raise RuntimeError(f"ADB not found at {self.adb_path}")
-        self.logcat_process = None
         self.shell_thread = None
         self.adb_command_thread = None
+        self.logcat_thread = None
         self.interactive_shell_thread = None
         self.current_device = None
 
@@ -167,8 +168,8 @@ class ADBCore:
                 value = result.stdout.strip()
                 if value:
                     all_info.append((label, value))
-            except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
-                pass # Ignore errors for properties that don't exist
+            except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+                raise RuntimeError(f"Failed to get device property: {e}")
 
         return all_info
         
@@ -356,7 +357,7 @@ class ADBCore:
             if sys.platform == "win32":
                 creation_flags = subprocess.CREATE_NO_WINDOW
             subprocess.run(self.get_adb_cmd("shell", "screenrecord", "--time-limit", "30", temp_path), timeout=35, check=True, creationflags=creation_flags)
-            subprocess.run(self.get_adb_cmd("pull", temp_path, save_.path), timeout=30, check=True, creationflags=creation_flags)
+            subprocess.run(self.get_adb_cmd("pull", temp_path, save_path), timeout=30, check=True, creationflags=creation_flags)
             subprocess.run(self.get_adb_cmd("shell", "rm", temp_path), timeout=5, check=True, creationflags=creation_flags)
             return True
         except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
@@ -411,22 +412,20 @@ class ADBCore:
         cmd = self.get_adb_cmd("restore", backup_path)
         self.run_adb_command(cmd, callback)
             
-    def start_logcat(self):
+    def start_logcat_thread(self, callback):
         """Start logcat monitoring"""
         if not self.current_device:
             raise RuntimeError("No device selected")
 
-        creation_flags = 0
-        if sys.platform == "win32":
-            creation_flags = subprocess.CREATE_NO_WINDOW
-        self.logcat_process = subprocess.Popen(self.get_adb_cmd("logcat", "-v", "time"), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8', errors='replace', creationflags=creation_flags)
-        return self.logcat_process
+        self.logcat_thread = LogcatThread(self.current_device)
+        self.logcat_thread.log_line.connect(callback)
+        self.logcat_thread.start()
 
-    def stop_logcat(self):
+    def stop_logcat_thread(self):
         """Stop logcat monitoring"""
-        if self.logcat_process:
-            self.logcat_process.kill()
-            self.logcat_process = None
+        if self.logcat_thread:
+            self.logcat_thread.stop()
+            self.logcat_thread = None
 
     def clear_logcat(self):
         """Clear logcat buffer"""
@@ -436,5 +435,5 @@ class ADBCore:
                 if sys.platform == "win32":
                     creation_flags = subprocess.CREATE_NO_WINDOW
                 subprocess.run(self.get_adb_cmd("logcat", "-c"), check=True, creationflags=creation_flags)
-            except (FileNotFoundError, subprocess.CalledProcessError):
-                pass
+            except (FileNotFoundError, subprocess.CalledProcessError) as e:
+                raise RuntimeError(f"Failed to clear logcat: {e}")
