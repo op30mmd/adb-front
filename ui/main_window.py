@@ -22,6 +22,7 @@ class ADBManager(QMainWindow):
         self.logcat_timer = None
         
         self.adb_core = ADBCore()
+        self.adb_core.shell_output.connect(self.handle_shell_output)
         
         self.init_ui()
         self.refresh_devices()
@@ -628,6 +629,11 @@ class ADBManager(QMainWindow):
                 self.show_message("Success", "Folder created successfully")
             except RuntimeError as e:
                 self.show_error(str(e))
+
+    def handle_shell_output(self, output):
+        """Append shell output to the text edit."""
+        self.shell_output.moveCursor(self.shell_output.textCursor().End)
+        self.shell_output.insertPlainText(output)
 
     def execute_shell_command(self):
         command = self.shell_input.text()

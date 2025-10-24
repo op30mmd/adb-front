@@ -4,6 +4,7 @@ import queue
 import time
 import sys
 import os
+import logging
 
 if sys.platform != "win32":
     import select
@@ -95,27 +96,14 @@ class InteractiveShellThread(threading.Thread):
         """Read output from stream continuously"""
         while self.running and not self.stop_event.is_set():
             try:
-                if sys.platform == "win32":
-                    # Windows: Use small reads with timeout
-                    data = stream.read(1)
-                    if data:
-                        self.output_queue.put(data)
-                    else:
-                        time.sleep(0.01)
+                # Use a non-blocking read with a small timeout
+                data = stream.read(4096)
+                if data:
+                    self.output_queue.put(data)
                 else:
-                    # Unix: Non-blocking read
-                    try:
-                        data = stream.read(4096)
-                        if data:
-                            self.output_queue.put(data)
-                        else:
-                            break  # EOF
-                    except IOError as e:
-                        if e.errno != errno.EAGAIN:
-                            break
-                        time.sleep(0.01)
+                    time.sleep(0.01) # Avoid busy-waiting
             except Exception as e:
-                print(f"Error reading {stream_name}: {e}")
+                logging.error(f"Error reading {stream_name}: {e}")
                 break
     
     def _write_input(self):
@@ -133,7 +121,7 @@ class InteractiveShellThread(threading.Thread):
             except queue.Empty:
                 continue
             except Exception as e:
-                print(f"Error writing input: {e}")
+                logging.error(f"Error writing input: {e}")
     
     def send_command(self, command):
         """Send a command to the shell"""
@@ -147,19 +135,11 @@ class InteractiveShellThread(threading.Thread):
     
     def get_output(self, timeout=0.1):
         """Get output from the shell"""
-        output = b""
-        deadline = time.time() + timeout
-        
-        while time.time() < deadline:
-            try:
-                chunk = self.output_queue.get_nowait()
-                output += chunk
-            except queue.Empty:
-                if output:  # If we have some output, return it
-                    break
-                time.sleep(0.01)
-        
-        return output.decode('utf-8', errors='replace')
+        try:
+            output = self.output_queue.get(timeout=timeout)
+            return output.decode('utf-8', errors='replace')
+        except queue.Empty:
+            return ""
     
     def cleanup(self):
         """Clean up resources"""

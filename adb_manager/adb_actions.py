@@ -4,12 +4,16 @@ import re
 import sys
 import shlex
 from pathlib import Path
+import logging
 
 from adb_manager.adb_thread import ADBThread
 from adb_manager.interactive_shell_thread import InteractiveShellThread
 from adb_manager.logcat_thread import LogcatThread
+from PyQt6.QtCore import QObject, pyqtSignal
 import os
 import sys
+import threading
+import time
 
 def get_adb_path():
     """Get the path to the bundled adb executable"""
@@ -32,8 +36,11 @@ def get_adb_path():
 
     return adb_path
 
-class ADBCore:
+class ADBCore(QObject):
+    shell_output = pyqtSignal(str)
+
     def __init__(self):
+        super().__init__()
         self.adb_path = get_adb_path()
         if not self.is_adb_available():
             raise RuntimeError(f"ADB not found at {self.adb_path}")
@@ -117,6 +124,18 @@ class ADBCore:
 
         self.interactive_shell_thread = InteractiveShellThread(self.current_device)
         self.interactive_shell_thread.start()
+
+        # Start a thread to read shell output
+        self.shell_reader_thread = threading.Thread(target=self._read_shell_output, daemon=True)
+        self.shell_reader_thread.start()
+
+    def _read_shell_output(self):
+        """Continuously read from the interactive shell's output queue."""
+        while self.interactive_shell_thread and self.interactive_shell_thread.is_alive():
+            output = self.interactive_shell_thread.get_output()
+            if output:
+                self.shell_output.emit(output)
+            time.sleep(0.1)
 
     def start_adb_server(self):
         """Start ADB server"""
@@ -237,23 +256,40 @@ class ADBCore:
             if not result.stdout:
                 return files
 
+            # Regex to match ls -la output with different date formats
+            ls_pattern = re.compile(
+                r'^(?P<permissions>[\w-]+)\s+'
+                r'(?P<links>\d+)\s+'
+                r'(?P<owner>\S+)\s+'
+                r'(?P<group>\S+)\s+'
+                r'(?P<size>\d+)\s+'
+                r'(?P<date>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}|\w+\s+\d+\s+\d{2}:\d{2}|\w+\s+\d+\s+\d{4})\s+'
+                r'(?P<name>.+)$'
+            )
+
             for line in result.stdout.splitlines():
-                if not line.strip() or "->" in line or line.startswith("total"):  # Ignore links for now
+                if not line.strip() or line.startswith("total"):
                     continue
 
-                parts = line.split()
-                if len(parts) < 6:
-                    continue
+                match = ls_pattern.match(line)
+                if match:
+                    details = match.groupdict()
+                    name = details['name']
 
-                perms = parts[0]
-                size = parts[4]
-                name = " ".join(parts[8:])
+                    # Skip '.' and '..' directories
+                    if name in ['.', '..'] or "->" in name:
+                        continue
 
-                if name in ['.', '..']:
-                    continue
+                    file_type = "Directory" if details['permissions'].startswith('d') else "File"
 
-                file_type = "Directory" if perms.startswith('d') else "File"
-                files.append({"name": name, "type": file_type, "size": size, "permissions": perms})
+                    files.append({
+                        "name": name,
+                        "type": file_type,
+                        "size": details['size'],
+                        "permissions": details['permissions']
+                    })
+                else:
+                    logging.warning(f"Could not parse ls line: {line}")
 
             return files
 

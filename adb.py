@@ -3,11 +3,34 @@
 import sys
 import multiprocessing
 import os
+import logging
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import QLockFile, QDir
 
 from ui.main_window import ADBManager
+
+def setup_logging():
+    """Configure logging to a file."""
+    log_file = os.path.join(QDir.tempPath(), "adb_manager.log")
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+    logging.info("ADB Manager application started.")
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    """Handle uncaught exceptions and log them."""
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    logging.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+sys.excepthook = handle_exception
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -21,6 +44,7 @@ def resource_path(relative_path):
 
 def main():
     multiprocessing.freeze_support()
+    setup_logging()
 
     # Ensure only one instance of the application is running
     lock_file = QLockFile(os.path.join(QDir.tempPath(), "adb_manager.lock"))
