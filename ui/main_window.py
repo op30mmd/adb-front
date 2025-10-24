@@ -3,10 +3,10 @@ from pathlib import Path
 import re
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QTabWidget, QPushButton, QLabel, 
-                             QTextEdit, QLineEdit, QTreeWidget,
+                             QTextEdit, QLineEdit,
                              QFileDialog, QComboBox, QSplitter, QProgressBar,
                              QMessageBox, QListWidget, QGroupBox, QTableWidget,
-                             QTableWidgetItem, QHeaderView, QInputDialog, QApplication, QTreeWidgetItem)
+                             QTableWidgetItem, QHeaderView, QInputDialog, QApplication)
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QColor, QPalette, QIcon, QTextCharFormat
 
@@ -139,25 +139,32 @@ class ADBManager(QMainWindow):
         nav_layout.addWidget(self.path_edit)
         
         browse_btn = QPushButton("Browse")
+        browse_btn.setIcon(QIcon.fromTheme("document-open"))
         browse_btn.clicked.connect(self.browse_device_path)
         nav_layout.addWidget(browse_btn)
         
         parent_btn = QPushButton("Parent Dir")
+        parent_btn.setIcon(QIcon.fromTheme("go-up"))
         parent_btn.clicked.connect(self.go_parent_directory)
         nav_layout.addWidget(parent_btn)
 
         home_btn = QPushButton("Home")
+        home_btn.setIcon(QIcon.fromTheme("go-home"))
         home_btn.clicked.connect(self.go_home)
         nav_layout.addWidget(home_btn)
         
         layout.addLayout(nav_layout)
         
         # File list
-        self.file_tree = QTreeWidget()
-        self.file_tree.setHeaderLabels(["Name", "Type", "Size", "Permissions"])
-        self.file_tree.setColumnWidth(0, 300)
-        self.file_tree.itemDoubleClicked.connect(self.on_file_double_click)
-        layout.addWidget(self.file_tree)
+        self.file_table = QTableWidget()
+        self.file_table.setColumnCount(4)
+        self.file_table.setHorizontalHeaderLabels(["Name", "Type", "Size", "Permissions"])
+        self.file_table.setColumnWidth(0, 300)
+        self.file_table.horizontalHeader().setStretchLastSection(True)
+        self.file_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.file_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.file_table.itemDoubleClicked.connect(self.on_file_double_click)
+        layout.addWidget(self.file_table)
         
         # Progress bar
         self.progress_bar = QProgressBar()
@@ -428,13 +435,25 @@ class ADBManager(QMainWindow):
         self.browse_device_path()
 
     def on_file_double_click(self, item):
-        name = item.text(0)
-        file_type = item.text(1)
+        if item is None:
+            return
         
-        if file_type == "Directory":
-            new_path = os.path.join(self.path_edit.text(), name)
-            self.path_edit.setText(new_path)
-            self.browse_device_path()
+        row = item.row()
+        name_item = self.file_table.item(row, 0)
+        type_item = self.file_table.item(row, 1)
+
+        if name_item and type_item:
+            name = name_item.text()
+            file_type = type_item.text()
+
+            if file_type == "Directory":
+                path = self.path_edit.text()
+                # Prevent multiple slashes when navigating
+                if not path.endswith('/'):
+                    path += '/'
+                new_path = path + name
+                self.path_edit.setText(new_path)
+                self.browse_device_path()
 
     def show_message(self, title, message):
         QMessageBox.information(self, title, message)
@@ -535,21 +554,32 @@ class ADBManager(QMainWindow):
         try:
             path = self.path_edit.text()
             files = self.adb_core.browse_device_path(path)
-            self.file_tree.clear()
+            self.file_table.setRowCount(0)
             if files:
-                for f in files:
-                    item = QTreeWidgetItem([f["name"], f["type"], f["size"], f["permissions"]])
-                    self.file_tree.addTopLevelItem(item)
+                self.file_table.setRowCount(len(files))
+                for i, f in enumerate(files):
+                    name_item = QTableWidgetItem(f["name"])
+
+                    if f["type"] == "Directory":
+                        name_item.setIcon(QIcon.fromTheme("folder"))
+                    else:
+                        name_item.setIcon(QIcon.fromTheme("document"))
+
+                    self.file_table.setItem(i, 0, name_item)
+                    self.file_table.setItem(i, 1, QTableWidgetItem(f["type"]))
+                    self.file_table.setItem(i, 2, QTableWidgetItem(f["size"]))
+                    self.file_table.setItem(i, 3, QTableWidgetItem(f["permissions"]))
         except RuntimeError as e:
             self.show_error(str(e))
 
     def pull_file(self):
-        selected_item = self.file_tree.currentItem()
-        if not selected_item:
+        selected_items = self.file_table.selectedItems()
+        if not selected_items:
             self.show_message("Warning", "Please select a file")
             return
 
-        filename = selected_item.text(0)
+        row = self.file_table.currentRow()
+        filename = self.file_table.item(row, 0).text()
         source = f"{self.path_edit.text()}/{filename}".replace('//', '/')
 
         dest, _ = QFileDialog.getSaveFileName(None, "Save File", filename)
@@ -570,15 +600,16 @@ class ADBManager(QMainWindow):
                 self.show_error(str(e))
 
     def delete_file(self):
-        selected_item = self.file_tree.currentItem()
-        if not selected_item:
+        selected_items = self.file_table.selectedItems()
+        if not selected_items:
             self.show_message("Warning", "Please select a file")
             return
 
-        filename = selected_item.text(0)
+        row = self.file_table.currentRow()
+        filename = self.file_table.item(row, 0).text()
 
         reply = QMessageBox.question(None, "Confirm", f"Delete {filename}?",
-                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
 
         if reply == QMessageBox.StandardButton.Yes:
             path = f"{self.path_edit.text()}/{filename}".replace('//', '/')

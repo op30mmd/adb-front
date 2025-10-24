@@ -2,6 +2,7 @@ import subprocess
 import os
 import re
 import sys
+import shlex
 from pathlib import Path
 
 from adb_manager.adb_thread import ADBThread
@@ -50,7 +51,13 @@ class ADBCore:
         cmd = [self.adb_path]
         if self.current_device:
             cmd.extend(["-s", self.current_device])
-        cmd.extend(args)
+
+        # Quote arguments to handle spaces and special characters
+        for arg in args:
+            if sys.platform != 'win32':
+                cmd.append(shlex.quote(arg))
+            else:
+                cmd.append(arg)
         return cmd
 
     def run_adb_command(self, command, callback=None):
@@ -218,39 +225,38 @@ class ADBCore:
         """Browse device file system"""
         if not self.current_device:
             raise RuntimeError("No device selected")
-            
+
         try:
-            cmd = self.get_adb_cmd("shell", f"ls -lA '{path}'")
+            cmd = self.get_adb_cmd("shell", "ls", "-la", path)
             creation_flags = 0
             if sys.platform == "win32":
                 creation_flags = subprocess.CREATE_NO_WINDOW
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=10, check=True, encoding='utf-8', errors='replace', creationflags=creation_flags)
-            
+
             files = []
             if not result.stdout:
                 return files
-            
+
             for line in result.stdout.splitlines():
-                if not line.strip() or "->" in line or line.startswith("total"): # Ignore links for now
+                if not line.strip() or "->" in line or line.startswith("total"):  # Ignore links for now
                     continue
 
-                match = re.search(r'(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})', line)
-                if match:
-                    datetime_str = match.group(1)
-                    parts = line.split(datetime_str)
-                    details = parts[0]
-                    name = parts[1].strip()
-                    
-                    detail_parts = details.split()
-                    if len(detail_parts) >= 2:
-                        perms = detail_parts[0]
-                        size = detail_parts[-1]
-                        
-                        file_type = "Directory" if perms.startswith('d') else "File"
-                        files.append({"name": name, "type": file_type, "size": size, "permissions": perms})
+                parts = line.split()
+                if len(parts) < 6:
+                    continue
+
+                perms = parts[0]
+                size = parts[4]
+                name = " ".join(parts[8:])
+
+                if name in ['.', '..']:
+                    continue
+
+                file_type = "Directory" if perms.startswith('d') else "File"
+                files.append({"name": name, "type": file_type, "size": size, "permissions": perms})
 
             return files
-                            
+
         except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
             raise RuntimeError(f"Failed to browse path: {e}")
             
