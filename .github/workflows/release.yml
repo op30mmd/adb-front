@@ -29,9 +29,15 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Install UPX (Windows)
+      - name: Install System Libraries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxcb-cursor0 libxcb-xkb1 libxcb-render-util0 libxcb-shape0 libxcb-util1 libxcb-image0 libxcb-icccm4 libxcb-keysyms1 libxkbcommon-x11-0 libtiff5
+
+      - name: Install 7-Zip (Windows)
         if: runner.os == 'Windows'
-        run: choco install upx
+        run: choco install 7zip
 
       - name: Install FPM (Linux)
         if: runner.os == 'Linux'
@@ -43,9 +49,9 @@ jobs:
       - name: Run PyInstaller
         run: pyinstaller adb.spec --noconfirm
 
-      - name: Compress with UPX (Windows)
+      - name: Compress with 7-Zip (Windows)
         if: runner.os == 'Windows'
-        run: upx --best --lzma dist/adb.exe
+        run: 7z a -m0=lzma2 -mx=9 adb-front-windows.7z dist/adb.exe
 
       - name: Create Linux packages
         if: runner.os == 'Linux'
@@ -59,7 +65,7 @@ jobs:
         with:
           name: adb-front-${{ runner.os }}
           path: |
-            dist/adb.exe
+            adb-front-windows.7z
             dist/adb.app
             dist/linux/
             dist/adb
@@ -87,7 +93,7 @@ jobs:
             Automated release of adb-front.
             ${{ github.event.head_commit.message }}
           files: |
-            artifacts/adb-front-Windows/adb.exe
+            artifacts/adb-front-Windows/adb-front-windows.7z
             artifacts/adb-front-macOS/adb.app
             artifacts/adb-front-Linux/*.deb
             artifacts/adb-front-Linux/*.rpm
