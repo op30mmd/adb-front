@@ -63,11 +63,11 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=True,  # Set to False if you don't want a console window
+    console=False,  # Set to False if you don't want a console window
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=os.path.join(project_dir, 'ui', 'icon.ico'),
+    icon=os.path.join(project_dir, 'ui', 'icon.png'),
 )
