@@ -1,0 +1,1 @@
+Please add adb.exe, AdbWinApi.dll, and AdbWinUsbApi.dll to this directory.
