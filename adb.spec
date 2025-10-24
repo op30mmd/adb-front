@@ -3,7 +3,7 @@ import os
 import sys
 
 # Get the absolute path to the project directory
-project_dir = os.path.abspath(os.path.dirname(__file__))
+project_dir = SPECPATH
 
 # Platform-specific ADB binary
 if sys.platform.startswith('win32'):
