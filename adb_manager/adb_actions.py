@@ -12,9 +12,15 @@ def get_adb_path():
     """Get the path to the bundled adb executable"""
     if hasattr(sys, '_MEIPASS'):
         # Running in a PyInstaller bundle
-        return os.path.join(sys._MEIPASS, 'adb_binary', 'adb.exe')
-    # Running in a normal Python environment
-    return os.path.join(os.path.abspath("."), "adb_binary", "adb.exe")
+        base_path = os.path.join(sys._MEIPASS, 'adb_binary')
+    else:
+        # Running in a normal Python environment
+        base_path = os.path.abspath("./adb_binary")
+
+    if sys.platform.startswith('win32'):
+        return os.path.join(base_path, 'adb.exe')
+    else:
+        return os.path.join(base_path, 'adb')
 
 class ADBCore:
     def __init__(self):

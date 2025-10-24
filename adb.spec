@@ -3,7 +3,22 @@ import os
 import sys
 
 # Get the absolute path to the project directory
-project_dir = os.path.abspath(SPECPATH)
+project_dir = os.path.abspath(os.path.dirname(__file__))
+
+# Platform-specific ADB binary
+if sys.platform.startswith('win32'):
+    adb_binary_path = os.path.join(project_dir, 'adb_binary', 'windows')
+    adb_data = [(os.path.join(adb_binary_path, 'adb.exe'), 'adb_binary'),
+                (os.path.join(adb_binary_path, 'AdbWinApi.dll'), 'adb_binary'),
+                (os.path.join(adb_binary_path, 'AdbWinUsbApi.dll'), 'adb_binary')]
+elif sys.platform.startswith('linux'):
+    adb_binary_path = os.path.join(project_dir, 'adb_binary', 'linux')
+    adb_data = [(os.path.join(adb_binary_path, 'adb'), 'adb_binary')]
+elif sys.platform.startswith('darwin'):
+    adb_binary_path = os.path.join(project_dir, 'adb_binary', 'macos')
+    adb_data = [(os.path.join(adb_binary_path, 'adb'), 'adb_binary')]
+else:
+    raise RuntimeError(f"Unsupported platform: {sys.platform}")
 
 block_cipher = None
 
@@ -12,8 +27,8 @@ a = Analysis(
     pathex=[project_dir],
     binaries=[],
     datas=[
-        ('ui/icon.png', 'ui'),  # Include the icon file
-    ],
+        ('ui/icon.png', 'ui'),
+    ] + adb_data,
     hiddenimports=[
         'adb_manager',
         'adb_manager.adb_actions',
@@ -54,5 +69,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,
+    icon=os.path.join(project_dir, 'ui', 'icon.ico'),
 )
