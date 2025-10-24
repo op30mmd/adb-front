@@ -1,0 +1,96 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.9']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Install UPX (Windows)
+        if: runner.os == 'Windows'
+        run: choco install upx
+
+      - name: Install FPM (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby-dev build-essential
+          sudo gem install fpm
+
+      - name: Run PyInstaller
+        run: pyinstaller adb.spec --noconfirm
+
+      - name: Compress with UPX (Windows)
+        if: runner.os == 'Windows'
+        run: upx --best --lzma dist/adb.exe
+
+      - name: Create Linux packages
+        if: runner.os == 'Linux'
+        run: |
+          fpm -s dir -t deb -n adb-front -v 1.0 -C dist/adb --description "A PyQt6 GUI for Android Debug Bridge" -p adb-front_1.0_amd64.deb
+          fpm -s dir -t rpm -n adb-front -v 1.0 -C dist/adb --description "A PyQt6 GUI for Android Debug Bridge" -p adb-front-1.0.x86_64.rpm
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: adb-front-${{ runner.os }}
+          path: |
+            dist/adb.exe
+            dist/adb.app
+            *.deb
+            *.rpm
+            dist/adb
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+
+      - name: Generate release tag
+        id: tag
+        run: echo "::set-output name=tag::release-$(date +'%Y-%m-%d-%H%M%S')"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: "Release ${{ steps.tag.outputs.tag }}"
+          body: |
+            Automated release of adb-front.
+            ${{ github.event.head_commit.message }}
+          files: |
+            artifacts/adb-front-Windows/adb.exe
+            artifacts/adb-front-macOS/adb.app
+            artifacts/adb-front-Linux/*.deb
+            artifacts/adb-front-Linux/*.rpm
+            artifacts/adb-front-Linux/adb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
