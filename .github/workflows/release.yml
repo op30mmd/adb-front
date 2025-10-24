@@ -113,8 +113,8 @@ jobs:
           files: |
             artifacts/adb-front-Windows/adb-front-windows.7z
             artifacts/adb-front-macOS/adb.app
-            artifacts/adb-front-Linux/*.deb
-            artifacts/adb-front-Linux/*.rpm
+            artifacts/adb-front-Linux/linux/*.deb
+            artifacts/adb-front-Linux/linux/*.rpm
             artifacts/adb-front-Linux/adb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
