@@ -16,10 +16,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -54,7 +54,7 @@ jobs:
           fpm -s dir -t rpm -n adb-front -v 1.0 -C dist/adb --description "A PyQt6 GUI for Android Debug Bridge" -p adb-front-1.0.x86_64.rpm
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: adb-front-${{ runner.os }}
           path: |
@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
 
@@ -79,7 +79,7 @@ jobs:
         run: echo "::set-output name=tag::release-$(date +'%Y-%m-%d-%H%M%S')"
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: "Release ${{ steps.tag.outputs.tag }}"
