@@ -13,7 +13,7 @@ if sys.platform.startswith('win32'):
                 (os.path.join(adb_binary_path, 'AdbWinUsbApi.dll'), 'adb_binary')]
 elif sys.platform.startswith('linux'):
     adb_binary_path = os.path.join(project_dir, 'adb_binary', 'linux')
-    adb_data = [(os.path.join(adb_binary_path, 'adb'), 'adb_binary')]
+    adb_data = [(os.path.join(adb_binary_path, 'adbl'), 'adb_binary')]
 elif sys.platform.startswith('darwin'):
     adb_binary_path = os.path.join(project_dir, 'adb_binary', 'macos')
     adb_data = [(os.path.join(adb_binary_path, 'adb'), 'adb_binary')]

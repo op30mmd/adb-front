@@ -19,6 +19,8 @@ def get_adb_path():
 
     if sys.platform.startswith('win32'):
         return os.path.join(base_path, 'adb.exe')
+    elif sys.platform.startswith('linux'):
+        return os.path.join(base_path, 'adbl')
     else:
         return os.path.join(base_path, 'adb')
 
