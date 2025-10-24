@@ -71,3 +71,11 @@ exe = EXE(
     entitlements_file=None,
     icon=os.path.join(project_dir, 'ui', 'icon.png'),
 )
+
+if sys.platform == 'darwin':
+    app = BUNDLE(
+        exe,
+        name='adb.app',
+        icon=os.path.join(project_dir, 'ui', 'icon.png'),
+        bundle_identifier=None,
+    )
