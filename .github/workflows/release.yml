@@ -60,13 +60,26 @@ jobs:
           fpm -s dir -t deb -n adb-front -v 1.0 -p dist/linux/adb-front_1.0_amd64.deb -C dist adb
           fpm -s dir -t rpm -n adb-front -v 1.0 -p dist/linux/adb-front-1.0.x86_64.rpm -C dist adb
 
-      - name: Upload artifacts
+      - name: Upload Windows artifact
+        if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
-          name: adb-front-${{ runner.os }}
+          name: adb-front-Windows
+          path: adb-front-windows.7z
+
+      - name: Upload macOS artifact
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: adb-front-macOS
+          path: dist/adb.app
+
+      - name: Upload Linux artifacts
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: adb-front-Linux
           path: |
-            adb-front-windows.7z
-            dist/adb.app
             dist/linux/
             dist/adb
 
@@ -74,11 +87,16 @@ jobs:
     name: Create Release
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+
+      - name: List downloaded artifacts
+        run: ls -R artifacts
 
       - name: Generate release tag
         id: tag
