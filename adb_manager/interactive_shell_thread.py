@@ -5,6 +5,7 @@ import time
 import sys
 import os
 import logging
+from PyQt6.QtCore import QObject, pyqtSignal
 
 if sys.platform != "win32":
     import select
@@ -12,14 +13,14 @@ if sys.platform != "win32":
     import errno
 
 class InteractiveShellThread(threading.Thread):
-    def __init__(self, device_serial):
+    def __init__(self, device_serial, output_callback=None):
         super().__init__(daemon=True)
         self.device_serial = device_serial
         self.process = None
-        self.output_queue = queue.Queue()
         self.input_queue = queue.Queue()
         self.running = False
         self.stop_event = threading.Event()
+        self.output_callback = output_callback
         
     def run(self):
         """Main thread execution"""
@@ -93,15 +94,19 @@ class InteractiveShellThread(threading.Thread):
             fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
     
     def _read_output(self, stream, stream_name):
-        """Read output from stream continuously"""
+        """Read output from stream continuously and invoke callback"""
         while self.running and not self.stop_event.is_set():
             try:
-                # Use a non-blocking read with a small timeout
                 data = stream.read(4096)
                 if data:
-                    self.output_queue.put(data)
+                    if self.output_callback:
+                        try:
+                            self.output_callback(data.decode('utf-8', errors='replace'))
+                        except Exception as e:
+                            logging.error(f"Error in shell output callback: {e}")
                 else:
-                    time.sleep(0.01) # Avoid busy-waiting
+                    # EOF or stream closed
+                    break
             except Exception as e:
                 logging.error(f"Error reading {stream_name}: {e}")
                 break
@@ -133,13 +138,6 @@ class InteractiveShellThread(threading.Thread):
             self.process.stdin.write(b'\x03')
             self.process.stdin.flush()
     
-    def get_output(self, timeout=0.1):
-        """Get output from the shell"""
-        try:
-            output = self.output_queue.get(timeout=timeout)
-            return output.decode('utf-8', errors='replace')
-        except queue.Empty:
-            return ""
     
     def cleanup(self):
         """Clean up resources"""

@@ -122,20 +122,8 @@ class ADBCore(QObject):
         if self.interactive_shell_thread and self.interactive_shell_thread.is_alive():
             return
 
-        self.interactive_shell_thread = InteractiveShellThread(self.current_device)
+        self.interactive_shell_thread = InteractiveShellThread(self.current_device, self.shell_output.emit)
         self.interactive_shell_thread.start()
-
-        # Start a thread to read shell output
-        self.shell_reader_thread = threading.Thread(target=self._read_shell_output, daemon=True)
-        self.shell_reader_thread.start()
-
-    def _read_shell_output(self):
-        """Continuously read from the interactive shell's output queue."""
-        while self.interactive_shell_thread and self.interactive_shell_thread.is_alive():
-            output = self.interactive_shell_thread.get_output()
-            if output:
-                self.shell_output.emit(output)
-            time.sleep(0.1)
 
     def start_adb_server(self):
         """Start ADB server"""

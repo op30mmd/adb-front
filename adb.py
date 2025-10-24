@@ -12,7 +12,14 @@ from ui.main_window import ADBManager
 
 def setup_logging():
     """Configure logging to a file."""
-    log_file = os.path.join(QDir.tempPath(), "adb_manager.log")
+    if hasattr(sys, '_MEIPASS'):
+        # In a PyInstaller bundle
+        app_dir = os.path.dirname(sys.executable)
+    else:
+        # In a normal Python environment
+        app_dir = os.path.abspath(".")
+
+    log_file = os.path.join(app_dir, "adb_manager.log")
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s - %(levelname)s - %(message)s',
