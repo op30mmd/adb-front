@@ -7,6 +7,8 @@ from pathlib import Path
 from adb_manager.adb_thread import ADBThread
 from adb_manager.interactive_shell_thread import InteractiveShellThread
 from adb_manager.logcat_thread import LogcatThread
+import os
+import sys
 
 def get_adb_path():
     """Get the path to the bundled adb executable"""
@@ -18,11 +20,16 @@ def get_adb_path():
         base_path = os.path.abspath("./adb_binary")
 
     if sys.platform.startswith('win32'):
-        return os.path.join(base_path, 'adb.exe')
+        adb_path = os.path.join(base_path, 'adb.exe')
     elif sys.platform.startswith('linux'):
-        return os.path.join(base_path, 'adbl')
+        adb_path = os.path.join(base_path, 'adbl')
     else:
-        return os.path.join(base_path, 'adb')
+        adb_path = os.path.join(base_path, 'adb')
+
+    if not sys.platform.startswith('win32'):
+        os.chmod(adb_path, 0o755)
+
+    return adb_path
 
 class ADBCore:
     def __init__(self):
