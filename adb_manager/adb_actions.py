@@ -313,7 +313,7 @@ class ADBCore(QObject):
             self.interactive_shell_thread = None
 
     def send_ctrl_c_to_shell(self):
-        if self.interactive_shell_thread and self.interactive_shell_thread.isRunning():
+        if self.interactive_shell_thread and self.interactive_shell_thread.is_alive():
             self.interactive_shell_thread.send_ctrl_c()
 
     def execute_shell_command(self, command):
@@ -321,7 +321,7 @@ class ADBCore(QObject):
         if not self.current_device:
             raise RuntimeError("No device selected")
             
-        if not self.interactive_shell_thread or not self.interactive_shell_thread.isRunning():
+        if not self.interactive_shell_thread or not self.interactive_shell_thread.is_alive():
             self.start_interactive_shell()
 
         if not command:
