@@ -33,7 +33,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxcb-cursor0 libxcb-xkb1 libxcb-render-util0 libxcb-shape0 libxcb-util1 libxcb-image0 libxcb-icccm4 libxcb-keysyms1 libxkbcommon-x11-0 libtiff5
+          sudo apt-get install -y libxcb-cursor0 libxcb-xkb1 libxcb-render-util0 libxcb-shape0 libxcb-util1 libxcb-image0 libxcb-icccm4 libxcb-keysyms1 libxkbcommon-x11-0 libtiff6
 
       - name: Install 7-Zip (Windows)
         if: runner.os == 'Windows'
