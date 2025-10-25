@@ -17,6 +17,8 @@ if platform.system() == "Windows":
 else:
     from termqt import TerminalPOSIXExecIO as TerminalIO
 
+import platform
+
 from adb_manager.adb_actions import ADBCore
 
 class ADBManager(QMainWindow):
@@ -33,7 +35,9 @@ class ADBManager(QMainWindow):
         self.adb_core = ADBCore()
         
         self.init_ui()
-        self.refresh_devices()
+
+        # Defer the initial device scan to improve startup time
+        QTimer.singleShot(100, self.refresh_devices)
         
     def init_ui(self):
         """Initialize the user interface"""
@@ -75,7 +79,7 @@ class ADBManager(QMainWindow):
         
         # Refresh button
         refresh_btn = QPushButton("Refresh Devices")
-        refresh_btn.setIcon(QIcon.fromTheme("view-refresh"))
+        refresh_btn.setIcon(QIcon.fromTheme("view-refresh", QIcon("ui/icons/view-refresh.png")))
         refresh_btn.clicked.connect(self.refresh_devices)
         layout.addWidget(refresh_btn)
         
@@ -83,12 +87,12 @@ class ADBManager(QMainWindow):
         
         # Server controls
         start_server_btn = QPushButton("Start Server")
-        start_server_btn.setIcon(QIcon.fromTheme("media-playback-start"))
+        start_server_btn.setIcon(QIcon.fromTheme("media-playback-start", QIcon("ui/icons/media-playback-start.png")))
         start_server_btn.clicked.connect(self.start_adb_server)
         layout.addWidget(start_server_btn)
         
         kill_server_btn = QPushButton("Kill Server")
-        kill_server_btn.setIcon(QIcon.fromTheme("process-stop"))
+        kill_server_btn.setIcon(QIcon.fromTheme("process-stop", QIcon("ui/icons/process-stop.png")))
         kill_server_btn.clicked.connect(self.kill_adb_server)
         layout.addWidget(kill_server_btn)
         
@@ -112,7 +116,7 @@ class ADBManager(QMainWindow):
         info_layout.addWidget(self.device_info_table)
         
         refresh_info_btn = QPushButton("Refresh Info")
-        refresh_info_btn.setIcon(QIcon.fromTheme("view-refresh"))
+        refresh_info_btn.setIcon(QIcon.fromTheme("view-refresh", QIcon("ui/icons/view-refresh.png")))
         refresh_info_btn.clicked.connect(self.load_device_info)
         info_layout.addWidget(refresh_info_btn)
         
@@ -130,7 +134,7 @@ class ADBManager(QMainWindow):
         battery_layout.addWidget(self.battery_table)
         
         refresh_battery_btn = QPushButton("Refresh Battery")
-        refresh_battery_btn.setIcon(QIcon.fromTheme("view-refresh"))
+        refresh_battery_btn.setIcon(QIcon.fromTheme("view-refresh", QIcon("ui/icons/view-refresh.png")))
         refresh_battery_btn.clicked.connect(self.load_battery_info)
         battery_layout.addWidget(refresh_battery_btn)
         
@@ -153,17 +157,17 @@ class ADBManager(QMainWindow):
         nav_layout.addWidget(self.path_edit)
         
         browse_btn = QPushButton("Browse")
-        browse_btn.setIcon(QIcon.fromTheme("document-open"))
+        browse_btn.setIcon(QIcon.fromTheme("document-open", QIcon("ui/icons/document-open.png")))
         browse_btn.clicked.connect(self.browse_device_path)
         nav_layout.addWidget(browse_btn)
         
         parent_btn = QPushButton("Parent Dir")
-        parent_btn.setIcon(QIcon.fromTheme("go-up"))
+        parent_btn.setIcon(QIcon.fromTheme("go-up", QIcon("ui/icons/go-up.png")))
         parent_btn.clicked.connect(self.go_parent_directory)
         nav_layout.addWidget(parent_btn)
 
         home_btn = QPushButton("Home")
-        home_btn.setIcon(QIcon.fromTheme("go-home"))
+        home_btn.setIcon(QIcon.fromTheme("go-home", QIcon("ui/icons/go-home.png")))
         home_btn.clicked.connect(self.go_home)
         nav_layout.addWidget(home_btn)
         
@@ -189,22 +193,22 @@ class ADBManager(QMainWindow):
         ops_layout = QHBoxLayout()
         
         pull_btn = QPushButton("Pull (Download)")
-        pull_btn.setIcon(QIcon.fromTheme("arrow-down"))
+        pull_btn.setIcon(QIcon.fromTheme("arrow-down", QIcon("ui/icons/arrow-down.png")))
         pull_btn.clicked.connect(self.pull_file)
         ops_layout.addWidget(pull_btn)
         
         push_btn = QPushButton("Push (Upload)")
-        push_btn.setIcon(QIcon.fromTheme("arrow-up"))
+        push_btn.setIcon(QIcon.fromTheme("arrow-up", QIcon("ui/icons/arrow-up.png")))
         push_btn.clicked.connect(self.push_file)
         ops_layout.addWidget(push_btn)
         
         delete_btn = QPushButton("Delete")
-        delete_btn.setIcon(QIcon.fromTheme("edit-delete"))
+        delete_btn.setIcon(QIcon.fromTheme("edit-delete", QIcon("ui/icons/edit-delete.png")))
         delete_btn.clicked.connect(self.delete_file)
         ops_layout.addWidget(delete_btn)
         
         mkdir_btn = QPushButton("New Folder")
-        mkdir_btn.setIcon(QIcon.fromTheme("folder-new"))
+        mkdir_btn.setIcon(QIcon.fromTheme("folder-new", QIcon("ui/icons/folder-new.png")))
         mkdir_btn.clicked.connect(self.create_directory)
         ops_layout.addWidget(mkdir_btn)
         
@@ -254,22 +258,22 @@ class ADBManager(QMainWindow):
         ops_layout = QHBoxLayout()
         
         install_btn = QPushButton("Install APK")
-        install_btn.setIcon(QIcon.fromTheme("document-new"))
+        install_btn.setIcon(QIcon.fromTheme("document-new", QIcon("ui/icons/document-new.png")))
         install_btn.clicked.connect(self.install_apk)
         ops_layout.addWidget(install_btn)
         
         uninstall_btn = QPushButton("Uninstall")
-        uninstall_btn.setIcon(QIcon.fromTheme("edit-delete"))
+        uninstall_btn.setIcon(QIcon.fromTheme("edit-delete", QIcon("ui/icons/edit-delete.png")))
         uninstall_btn.clicked.connect(self.uninstall_app)
         ops_layout.addWidget(uninstall_btn)
         
         clear_data_btn = QPushButton("Clear Data")
-        clear_data_btn.setIcon(QIcon.fromTheme("edit-clear"))
+        clear_data_btn.setIcon(QIcon.fromTheme("edit-clear", QIcon("ui/icons/edit-clear.png")))
         clear_data_btn.clicked.connect(self.clear_app_data)
         ops_layout.addWidget(clear_data_btn)
         
         force_stop_btn = QPushButton("Force Stop")
-        force_stop_btn.setIcon(QIcon.fromTheme("process-stop"))
+        force_stop_btn.setIcon(QIcon.fromTheme("process-stop", QIcon("ui/icons/process-stop.png")))
         force_stop_btn.clicked.connect(self.force_stop_app)
         ops_layout.addWidget(force_stop_btn)
         
@@ -289,12 +293,12 @@ class ADBManager(QMainWindow):
         
         screen_btns = QHBoxLayout()
         screenshot_btn = QPushButton("Screenshot")
-        screenshot_btn.setIcon(QIcon.fromTheme("media-record"))
+        screenshot_btn.setIcon(QIcon.fromTheme("media-record", QIcon("ui/icons/media-record.png")))
         screenshot_btn.clicked.connect(self.take_screenshot)
         screen_btns.addWidget(screenshot_btn)
         
         screenrecord_btn = QPushButton("Screen Record (30s)")
-        screenrecord_btn.setIcon(QIcon.fromTheme("media-record"))
+        screenrecord_btn.setIcon(QIcon.fromTheme("media-record", QIcon("ui/icons/media-record.png")))
         screenrecord_btn.clicked.connect(self.screen_record)
         screen_btns.addWidget(screenrecord_btn)
         
@@ -309,17 +313,17 @@ class ADBManager(QMainWindow):
         
         control_btns = QHBoxLayout()
         reboot_btn = QPushButton("Reboot")
-        reboot_btn.setIcon(QIcon.fromTheme("system-reboot"))
+        reboot_btn.setIcon(QIcon.fromTheme("system-reboot", QIcon("ui/icons/system-reboot.png")))
         reboot_btn.clicked.connect(lambda: self.adb_core.run_adb_command(self.adb_core.get_adb_cmd("reboot")))
         control_btns.addWidget(reboot_btn)
         
         recovery_btn = QPushButton("Reboot Recovery")
-        recovery_btn.setIcon(QIcon.fromTheme("system-reboot"))
+        recovery_btn.setIcon(QIcon.fromTheme("system-reboot", QIcon("ui/icons/system-reboot.png")))
         recovery_btn.clicked.connect(lambda: self.adb_core.run_adb_command(self.adb_core.get_adb_cmd("reboot", "recovery")))
         control_btns.addWidget(recovery_btn)
         
         bootloader_btn = QPushButton("Reboot Bootloader")
-        bootloader_btn.setIcon(QIcon.fromTheme("system-reboot"))
+        bootloader_btn.setIcon(QIcon.fromTheme("system-reboot", QIcon("ui/icons/system-reboot.png")))
         bootloader_btn.clicked.connect(lambda: self.adb_core.run_adb_command(self.adb_core.get_adb_cmd("reboot", "bootloader")))
         control_btns.addWidget(bootloader_btn)
         
@@ -334,12 +338,12 @@ class ADBManager(QMainWindow):
         
         network_btns = QHBoxLayout()
         wifi_btn = QPushButton("Enable WiFi ADB")
-        wifi_btn.setIcon(QIcon.fromTheme("network-wireless"))
+        wifi_btn.setIcon(QIcon.fromTheme("network-wireless", QIcon("ui/icons/network-wireless.png")))
         wifi_btn.clicked.connect(self.enable_wifi_adb)
         network_btns.addWidget(wifi_btn)
         
         connect_btn = QPushButton("Connect to IP")
-        connect_btn.setIcon(QIcon.fromTheme("network-wired"))
+        connect_btn.setIcon(QIcon.fromTheme("network-wired", QIcon("ui/icons/network-wired.png")))
         connect_btn.clicked.connect(self.connect_wifi_adb)
         network_btns.addWidget(connect_btn)
         
@@ -354,12 +358,12 @@ class ADBManager(QMainWindow):
         
         backup_btns = QHBoxLayout()
         backup_btn = QPushButton("Backup")
-        backup_btn.setIcon(QIcon.fromTheme("document-save"))
+        backup_btn.setIcon(QIcon.fromTheme("document-save", QIcon("ui/icons/document-save.png")))
         backup_btn.clicked.connect(self.backup_device)
         backup_btns.addWidget(backup_btn)
         
         restore_btn = QPushButton("Restore")
-        restore_btn.setIcon(QIcon.fromTheme("document-open"))
+        restore_btn.setIcon(QIcon.fromTheme("document-open", QIcon("ui/icons/document-open.png")))
         restore_btn.clicked.connect(self.restore_device)
         backup_btns.addWidget(restore_btn)
         
@@ -380,17 +384,17 @@ class ADBManager(QMainWindow):
         controls = QHBoxLayout()
         
         start_log_btn = QPushButton("Start Logcat")
-        start_log_btn.setIcon(QIcon.fromTheme("media-playback-start"))
+        start_log_btn.setIcon(QIcon.fromTheme("media-playback-start", QIcon("ui/icons/media-playback-start.png")))
         start_log_btn.clicked.connect(self.start_logcat)
         controls.addWidget(start_log_btn)
         
         stop_log_btn = QPushButton("Stop Logcat")
-        stop_log_btn.setIcon(QIcon.fromTheme("media-playback-stop"))
+        stop_log_btn.setIcon(QIcon.fromTheme("media-playback-stop", QIcon("ui/icons/media-playback-stop.png")))
         stop_log_btn.clicked.connect(self.stop_logcat)
         controls.addWidget(stop_log_btn)
         
         clear_log_btn = QPushButton("Clear")
-        clear_log_btn.setIcon(QIcon.fromTheme("edit-clear"))
+        clear_log_btn.setIcon(QIcon.fromTheme("edit-clear", QIcon("ui/icons/edit-clear.png")))
         clear_log_btn.clicked.connect(self.clear_logcat)
         controls.addWidget(clear_log_btn)
         
@@ -439,22 +443,29 @@ class ADBManager(QMainWindow):
             self.status_label.setText("No devices connected")
 
     def setup_shell_for_device(self, device_serial):
-        adb_path = self.adb_core.adb_path
-        cmd = [adb_path, "-s", device_serial, "shell", "-tt"]
+        try:
+            adb_path = self.adb_core.adb_path
 
-        self.terminal_io = TerminalIO(
-            self.shell_widget.row_len,
-            self.shell_widget.col_len,
-            cmd
-        )
+            # Use "shell" without "-tt" for Windows as it can cause issues with some environments
+            cmd = [adb_path, "-s", device_serial, "shell"]
+            if platform.system() != "Windows":
+                cmd.append("-tt")
 
-        if platform.system() == "Windows":
-            self.shell_widget.enable_auto_wrap(False)
+            self.terminal_io = TerminalIO(
+                self.shell_widget.row_len,
+                self.shell_widget.col_len,
+                cmd
+            )
 
-        self.terminal_io.stdout_callback = self.shell_widget.stdout
-        self.shell_widget.stdin_callback = self.terminal_io.write
-        self.shell_widget.resize_callback = self.terminal_io.resize
-        self.terminal_io.spawn()
+            if platform.system() == "Windows":
+                self.shell_widget.enable_auto_wrap(False)
+
+            self.terminal_io.stdout_callback = self.shell_widget.stdout
+            self.shell_widget.stdin_callback = self.terminal_io.write
+            self.shell_widget.resize_callback = self.terminal_io.resize
+            self.terminal_io.spawn()
+        except Exception as e:
+            self.show_error(f"Failed to start ADB shell: {e}")
 
     def go_parent_directory(self):
         path = Path(self.path_edit.text())
@@ -496,6 +507,7 @@ class ADBManager(QMainWindow):
 
     def cleanup(self):
         """Clean up resources before exiting"""
+        self.adb_core.cleanup()
         if self.terminal_io:
             self.terminal_io.terminate()
 
@@ -595,9 +607,9 @@ class ADBManager(QMainWindow):
                     name_item = QTableWidgetItem(f["name"])
 
                     if f["type"] == "Directory":
-                        name_item.setIcon(QIcon.fromTheme("folder"))
+                        name_item.setIcon(QIcon.fromTheme("folder", QIcon("ui/icons/folder.png")))
                     else:
-                        name_item.setIcon(QIcon.fromTheme("document"))
+                        name_item.setIcon(QIcon.fromTheme("document", QIcon("ui/icons/document.png")))
 
                     self.file_table.setItem(i, 0, name_item)
                     self.file_table.setItem(i, 1, QTableWidgetItem(f["type"]))

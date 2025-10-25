@@ -16,25 +16,41 @@ import threading
 import time
 
 def get_adb_path():
-    """Get the path to the bundled adb executable"""
-    if hasattr(sys, '_MEIPASS'):
-        # Running in a PyInstaller bundle
-        base_path = os.path.join(sys._MEIPASS, 'adb_binary')
-    else:
-        # Running in a normal Python environment
-        base_path = os.path.abspath("./adb_binary")
+    """Get the path to the bundled adb executable, ensuring compatibility"""
+    try:
+        if hasattr(sys, '_MEIPASS'):
+            # PyInstaller bundle
+            base_path = os.path.join(sys._MEIPASS, 'adb_binary')
+        else:
+            # Development environment
+            base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'adb_binary'))
 
-    if sys.platform.startswith('win32'):
-        adb_path = os.path.join(base_path, 'windows', 'adb.exe')
-    elif sys.platform.startswith('linux'):
-        adb_path = os.path.join(base_path, 'linux', 'adbl')
-    else:
-        adb_path = os.path.join(base_path, 'macos', 'adb')
+        platform_map = {
+            'win32': 'windows/adb.exe',
+            'linux': 'linux/adbl',
+            'darwin': 'macos/adb'
+        }
 
-    if not sys.platform.startswith('win32'):
-        os.chmod(adb_path, 0o755)
+        platform_key = sys.platform
+        if platform_key not in platform_map:
+            raise RuntimeError(f"Unsupported platform: {platform_key}")
 
-    return adb_path
+        adb_path = os.path.join(base_path, platform_map[platform_key])
+
+        if not os.path.exists(adb_path):
+            raise FileNotFoundError(f"ADB binary not found at: {adb_path}")
+
+        # Ensure execute permissions on non-Windows platforms
+        if platform_key != 'win32':
+            os.chmod(adb_path, 0o755)
+
+        return adb_path
+    except Exception as e:
+        # Log the error for debugging
+        logging.error(f"Error resolving ADB path: {e}")
+        # Return a path that will fail the is_adb_available check,
+        # leading to a graceful error message in the UI.
+        return ""
 
 class ADBCore(QObject):
     shell_output = pyqtSignal(str)
@@ -458,3 +474,10 @@ class ADBCore(QObject):
                 subprocess.run(self.get_adb_cmd("logcat", "-c"), check=True, creationflags=creation_flags)
             except (FileNotFoundError, subprocess.CalledProcessError) as e:
                 raise RuntimeError(f"Failed to clear logcat: {e}")
+
+    def cleanup(self):
+        """Clean up resources before exiting"""
+        self.stop_logcat_thread()
+        if self.adb_command_thread and self.adb_command_thread.isRunning():
+            self.adb_command_thread.quit()
+            self.adb_command_thread.wait()
