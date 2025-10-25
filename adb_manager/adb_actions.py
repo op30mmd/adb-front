@@ -7,7 +7,7 @@ from pathlib import Path
 import logging
 
 from adb_manager.adb_thread import ADBThread
-from adb_manager.interactive_shell_thread import InteractiveShellThread
+
 from adb_manager.logcat_thread import LogcatThread
 from PyQt6.QtCore import QObject, pyqtSignal
 import os
@@ -25,11 +25,11 @@ def get_adb_path():
         base_path = os.path.abspath("./adb_binary")
 
     if sys.platform.startswith('win32'):
-        adb_path = os.path.join(base_path, 'adb.exe')
+        adb_path = os.path.join(base_path, 'windows', 'adb.exe')
     elif sys.platform.startswith('linux'):
-        adb_path = os.path.join(base_path, 'adbl')
+        adb_path = os.path.join(base_path, 'linux', 'adbl')
     else:
-        adb_path = os.path.join(base_path, 'adb')
+        adb_path = os.path.join(base_path, 'macos', 'adb')
 
     if not sys.platform.startswith('win32'):
         os.chmod(adb_path, 0o755)
@@ -46,8 +46,7 @@ class ADBCore(QObject):
             raise RuntimeError(f"ADB not found at {self.adb_path}")
         self.shell_thread = None
         self.adb_command_thread = None
-        self.logcat_thread = None
-        self.interactive_shell_thread = None
+
         self.current_device = None
 
     def is_adb_available(self):
@@ -112,18 +111,9 @@ class ADBCore(QObject):
 
     def on_device_changed(self, device):
         """Handle device selection change"""
-        self.stop_interactive_shell()
         self.current_device = device if device else None
 
-    def start_interactive_shell(self):
-        if not self.current_device:
-            raise RuntimeError("No device selected")
-            
-        if self.interactive_shell_thread and self.interactive_shell_thread.is_alive():
-            return
 
-        self.interactive_shell_thread = InteractiveShellThread(self.current_device, self.shell_output.emit)
-        self.interactive_shell_thread.start()
 
     def start_adb_server(self):
         """Start ADB server"""
@@ -305,29 +295,15 @@ class ADBCore(QObject):
         self.run_adb_command(cmd, callback)
             
     def handle_shell_output(self, text):
-        pass
+        self.shell_output.emit(text)
 
-    def stop_interactive_shell(self):
-        if self.interactive_shell_thread:
-            self.interactive_shell_thread.stop()
-            self.interactive_shell_thread = None
 
-    def send_ctrl_c_to_shell(self):
-        if self.interactive_shell_thread and self.interactive_shell_thread.is_alive():
-            self.interactive_shell_thread.send_ctrl_c()
 
-    def execute_shell_command(self, command):
-        """Execute shell command"""
-        if not self.current_device:
-            raise RuntimeError("No device selected")
-            
-        if not self.interactive_shell_thread or not self.interactive_shell_thread.is_alive():
-            self.start_interactive_shell()
 
-        if not command:
-            return
-            
-        self.interactive_shell_thread.send_command(command)
+
+
+
+
         
     def list_packages(self, pkg_type):
         """List installed packages"""

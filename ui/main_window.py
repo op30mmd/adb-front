@@ -1,4 +1,5 @@
 import os
+import platform
 from pathlib import Path
 import re
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, 
@@ -7,22 +8,29 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                              QFileDialog, QComboBox, QSplitter, QProgressBar,
                              QMessageBox, QListWidget, QGroupBox, QTableWidget,
                              QTableWidgetItem, QHeaderView, QInputDialog, QApplication)
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QEvent
 from PyQt6.QtGui import QFont, QColor, QPalette, QIcon, QTextCharFormat, QTextCursor
+
+from termqt import Terminal
+if platform.system() == "Windows":
+    from termqt import TerminalWinptyIO as TerminalIO
+else:
+    from termqt import TerminalPOSIXExecIO as TerminalIO
 
 from adb_manager.adb_actions import ADBCore
 
 class ADBManager(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.setWindowIcon(QIcon(os.path.join(os.path.dirname(__file__), "icon.png")))
         self.setWindowTitle("ADB Manager")
         self.setGeometry(100, 100, 1400, 900)
         self.current_device = None
         self.device_path = "/sdcard/"
         self.logcat_timer = None
+        self.terminal_io = None
         
         self.adb_core = ADBCore()
-        self.adb_core.shell_output.connect(self.handle_shell_output)
         
         self.init_ui()
         self.refresh_devices()
@@ -67,6 +75,7 @@ class ADBManager(QMainWindow):
         
         # Refresh button
         refresh_btn = QPushButton("Refresh Devices")
+        refresh_btn.setIcon(QIcon.fromTheme("view-refresh"))
         refresh_btn.clicked.connect(self.refresh_devices)
         layout.addWidget(refresh_btn)
         
@@ -74,10 +83,12 @@ class ADBManager(QMainWindow):
         
         # Server controls
         start_server_btn = QPushButton("Start Server")
+        start_server_btn.setIcon(QIcon.fromTheme("media-playback-start"))
         start_server_btn.clicked.connect(self.start_adb_server)
         layout.addWidget(start_server_btn)
         
         kill_server_btn = QPushButton("Kill Server")
+        kill_server_btn.setIcon(QIcon.fromTheme("process-stop"))
         kill_server_btn.clicked.connect(self.kill_adb_server)
         layout.addWidget(kill_server_btn)
         
@@ -101,6 +112,7 @@ class ADBManager(QMainWindow):
         info_layout.addWidget(self.device_info_table)
         
         refresh_info_btn = QPushButton("Refresh Info")
+        refresh_info_btn.setIcon(QIcon.fromTheme("view-refresh"))
         refresh_info_btn.clicked.connect(self.load_device_info)
         info_layout.addWidget(refresh_info_btn)
         
@@ -118,6 +130,7 @@ class ADBManager(QMainWindow):
         battery_layout.addWidget(self.battery_table)
         
         refresh_battery_btn = QPushButton("Refresh Battery")
+        refresh_battery_btn.setIcon(QIcon.fromTheme("view-refresh"))
         refresh_battery_btn.clicked.connect(self.load_battery_info)
         battery_layout.addWidget(refresh_battery_btn)
         
@@ -176,18 +189,22 @@ class ADBManager(QMainWindow):
         ops_layout = QHBoxLayout()
         
         pull_btn = QPushButton("Pull (Download)")
+        pull_btn.setIcon(QIcon.fromTheme("arrow-down"))
         pull_btn.clicked.connect(self.pull_file)
         ops_layout.addWidget(pull_btn)
         
         push_btn = QPushButton("Push (Upload)")
+        push_btn.setIcon(QIcon.fromTheme("arrow-up"))
         push_btn.clicked.connect(self.push_file)
         ops_layout.addWidget(push_btn)
         
         delete_btn = QPushButton("Delete")
+        delete_btn.setIcon(QIcon.fromTheme("edit-delete"))
         delete_btn.clicked.connect(self.delete_file)
         ops_layout.addWidget(delete_btn)
         
         mkdir_btn = QPushButton("New Folder")
+        mkdir_btn.setIcon(QIcon.fromTheme("folder-new"))
         mkdir_btn.clicked.connect(self.create_directory)
         ops_layout.addWidget(mkdir_btn)
         
@@ -195,39 +212,14 @@ class ADBManager(QMainWindow):
         layout.addLayout(ops_layout)
         
         return widget
-        
+
     def create_shell_tab(self):
         """Create shell terminal tab"""
         widget = QWidget()
         layout = QVBoxLayout(widget)
         
-        # Shell output
-        self.shell_output = QTextEdit()
-        self.shell_output.setReadOnly(True)
-        self.shell_output.setFont(QFont("Consolas", 10))
-        layout.addWidget(self.shell_output)
-        
-        # Command input
-        cmd_layout = QHBoxLayout()
-        cmd_layout.addWidget(QLabel("Command:"))
-        self.shell_input = QLineEdit()
-        self.shell_input.returnPressed.connect(self.execute_shell_command)
-        self.shell_input.setPlaceholderText("Enter ADB shell command...")
-        cmd_layout.addWidget(self.shell_input)
-        
-        exec_btn = QPushButton("Execute")
-        exec_btn.clicked.connect(self.execute_shell_command)
-        cmd_layout.addWidget(exec_btn)
-
-        stop_btn = QPushButton("Stop")
-        stop_btn.clicked.connect(self.adb_core.send_ctrl_c_to_shell)
-        cmd_layout.addWidget(stop_btn)
-        
-        clear_btn = QPushButton("Clear")
-        clear_btn.clicked.connect(self.shell_output.clear)
-        cmd_layout.addWidget(clear_btn)
-        
-        layout.addLayout(cmd_layout)
+        self.shell_widget = Terminal(800, 600)
+        layout.addWidget(self.shell_widget)
         
         return widget
         
@@ -262,18 +254,22 @@ class ADBManager(QMainWindow):
         ops_layout = QHBoxLayout()
         
         install_btn = QPushButton("Install APK")
+        install_btn.setIcon(QIcon.fromTheme("document-new"))
         install_btn.clicked.connect(self.install_apk)
         ops_layout.addWidget(install_btn)
         
         uninstall_btn = QPushButton("Uninstall")
+        uninstall_btn.setIcon(QIcon.fromTheme("edit-delete"))
         uninstall_btn.clicked.connect(self.uninstall_app)
         ops_layout.addWidget(uninstall_btn)
         
         clear_data_btn = QPushButton("Clear Data")
+        clear_data_btn.setIcon(QIcon.fromTheme("edit-clear"))
         clear_data_btn.clicked.connect(self.clear_app_data)
         ops_layout.addWidget(clear_data_btn)
         
         force_stop_btn = QPushButton("Force Stop")
+        force_stop_btn.setIcon(QIcon.fromTheme("process-stop"))
         force_stop_btn.clicked.connect(self.force_stop_app)
         ops_layout.addWidget(force_stop_btn)
         
@@ -293,10 +289,12 @@ class ADBManager(QMainWindow):
         
         screen_btns = QHBoxLayout()
         screenshot_btn = QPushButton("Screenshot")
+        screenshot_btn.setIcon(QIcon.fromTheme("media-record"))
         screenshot_btn.clicked.connect(self.take_screenshot)
         screen_btns.addWidget(screenshot_btn)
         
         screenrecord_btn = QPushButton("Screen Record (30s)")
+        screenrecord_btn.setIcon(QIcon.fromTheme("media-record"))
         screenrecord_btn.clicked.connect(self.screen_record)
         screen_btns.addWidget(screenrecord_btn)
         
@@ -311,14 +309,17 @@ class ADBManager(QMainWindow):
         
         control_btns = QHBoxLayout()
         reboot_btn = QPushButton("Reboot")
+        reboot_btn.setIcon(QIcon.fromTheme("system-reboot"))
         reboot_btn.clicked.connect(lambda: self.adb_core.run_adb_command(self.adb_core.get_adb_cmd("reboot")))
         control_btns.addWidget(reboot_btn)
         
         recovery_btn = QPushButton("Reboot Recovery")
+        recovery_btn.setIcon(QIcon.fromTheme("system-reboot"))
         recovery_btn.clicked.connect(lambda: self.adb_core.run_adb_command(self.adb_core.get_adb_cmd("reboot", "recovery")))
         control_btns.addWidget(recovery_btn)
         
         bootloader_btn = QPushButton("Reboot Bootloader")
+        bootloader_btn.setIcon(QIcon.fromTheme("system-reboot"))
         bootloader_btn.clicked.connect(lambda: self.adb_core.run_adb_command(self.adb_core.get_adb_cmd("reboot", "bootloader")))
         control_btns.addWidget(bootloader_btn)
         
@@ -333,10 +334,12 @@ class ADBManager(QMainWindow):
         
         network_btns = QHBoxLayout()
         wifi_btn = QPushButton("Enable WiFi ADB")
+        wifi_btn.setIcon(QIcon.fromTheme("network-wireless"))
         wifi_btn.clicked.connect(self.enable_wifi_adb)
         network_btns.addWidget(wifi_btn)
         
         connect_btn = QPushButton("Connect to IP")
+        connect_btn.setIcon(QIcon.fromTheme("network-wired"))
         connect_btn.clicked.connect(self.connect_wifi_adb)
         network_btns.addWidget(connect_btn)
         
@@ -351,10 +354,12 @@ class ADBManager(QMainWindow):
         
         backup_btns = QHBoxLayout()
         backup_btn = QPushButton("Backup")
+        backup_btn.setIcon(QIcon.fromTheme("document-save"))
         backup_btn.clicked.connect(self.backup_device)
         backup_btns.addWidget(backup_btn)
         
         restore_btn = QPushButton("Restore")
+        restore_btn.setIcon(QIcon.fromTheme("document-open"))
         restore_btn.clicked.connect(self.restore_device)
         backup_btns.addWidget(restore_btn)
         
@@ -375,14 +380,17 @@ class ADBManager(QMainWindow):
         controls = QHBoxLayout()
         
         start_log_btn = QPushButton("Start Logcat")
+        start_log_btn.setIcon(QIcon.fromTheme("media-playback-start"))
         start_log_btn.clicked.connect(self.start_logcat)
         controls.addWidget(start_log_btn)
         
         stop_log_btn = QPushButton("Stop Logcat")
+        stop_log_btn.setIcon(QIcon.fromTheme("media-playback-stop"))
         stop_log_btn.clicked.connect(self.stop_logcat)
         controls.addWidget(stop_log_btn)
         
         clear_log_btn = QPushButton("Clear")
+        clear_log_btn.setIcon(QIcon.fromTheme("edit-clear"))
         clear_log_btn.clicked.connect(self.clear_logcat)
         controls.addWidget(clear_log_btn)
         
@@ -415,14 +423,38 @@ class ADBManager(QMainWindow):
     def on_device_changed(self, device):
         self.current_device = device
         self.adb_core.on_device_changed(device)
+
+        if self.terminal_io:
+            self.terminal_io.terminate()
+            self.terminal_io = None
+
         if self.current_device:
             self.status_label.setText(f"Connected to: {self.current_device}")
             self.load_device_info()
             self.load_battery_info()
             self.browse_device_path()
             self.list_packages("all")
+            self.setup_shell_for_device(self.current_device)
         else:
             self.status_label.setText("No devices connected")
+
+    def setup_shell_for_device(self, device_serial):
+        adb_path = self.adb_core.adb_path
+        cmd = [adb_path, "-s", device_serial, "shell", "-tt"]
+
+        self.terminal_io = TerminalIO(
+            self.shell_widget.row_len,
+            self.shell_widget.col_len,
+            cmd
+        )
+
+        if platform.system() == "Windows":
+            self.shell_widget.enable_auto_wrap(False)
+
+        self.terminal_io.stdout_callback = self.shell_widget.stdout
+        self.shell_widget.stdin_callback = self.terminal_io.write
+        self.shell_widget.resize_callback = self.terminal_io.resize
+        self.terminal_io.spawn()
 
     def go_parent_directory(self):
         path = Path(self.path_edit.text())
@@ -464,7 +496,8 @@ class ADBManager(QMainWindow):
 
     def cleanup(self):
         """Clean up resources before exiting"""
-        self.adb_core.stop_interactive_shell()
+        if self.terminal_io:
+            self.terminal_io.terminate()
 
     def closeEvent(self, event):
         self.cleanup()
@@ -629,19 +662,6 @@ class ADBManager(QMainWindow):
                 self.show_message("Success", "Folder created successfully")
             except RuntimeError as e:
                 self.show_error(str(e))
-
-    def handle_shell_output(self, output):
-        """Append shell output to the text edit."""
-        self.shell_output.moveCursor(QTextCursor.MoveOperation.End)
-        self.shell_output.insertPlainText(output)
-
-    def execute_shell_command(self):
-        command = self.shell_input.text()
-        try:
-            self.adb_core.execute_shell_command(command)
-            self.shell_input.clear()
-        except RuntimeError as e:
-            self.show_error(str(e))
 
     def list_packages(self, pkg_type):
         try:
