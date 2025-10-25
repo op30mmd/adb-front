@@ -28,8 +28,10 @@ a = Analysis(
     binaries=[],
     datas=[
         ('ui/icon.png', 'ui'),
+        ('ui/icons/fluent', 'ui/icons/fluent'),
     ] + adb_data,
     hiddenimports=[
+        'PyQt6.QtSvg',
         'adb_manager',
         'adb_manager.adb_actions',
         'adb_manager.adb_thread',
