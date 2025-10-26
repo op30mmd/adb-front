@@ -10,7 +10,8 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                              QTableWidgetItem, QHeaderView, QInputDialog, QApplication,
                              QStyle)
 from PyQt6.QtCore import Qt, QTimer, QEvent
-from PyQt6.QtGui import QFont, QColor, QPalette, QIcon, QTextCharFormat, QTextCursor
+from PyQt6.QtGui import QFont, QColor, QPalette, QIcon, QTextCharFormat, QTextCursor, QPainter, QPixmap
+from PyQt6.QtSvg import QSvgRenderer
 
 from termqt import Terminal
 if platform.system() == "Windows":
@@ -43,7 +44,20 @@ class ADBManager(QMainWindow):
     def get_icon(self, name):
         """Get icon based on platform"""
         if platform.system() == "Windows":
-            return QIcon(os.path.join(os.path.dirname(__file__), "icons", "fluent", f"{name}.svg"))
+            icon_path = os.path.join(os.path.dirname(__file__), "icons", "fluent", f"{name}.svg")
+
+            renderer = QSvgRenderer(icon_path)
+            pixmap = QPixmap(renderer.defaultSize())
+            pixmap.fill(Qt.GlobalColor.transparent)
+
+            painter = QPainter(pixmap)
+            renderer.render(painter)
+
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+            painter.fillRect(pixmap.rect(), self.palette().color(QPalette.ColorRole.Text))
+            painter.end()
+
+            return QIcon(pixmap)
         else:
             return QIcon.fromTheme(name)
         
