@@ -1,6 +1,6 @@
 import os
 import platform
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QTabWidget, QPushButton, QLabel, 
@@ -511,7 +511,7 @@ class ADBManager(QMainWindow):
             self.show_error(f"Failed to start ADB shell: {e}")
 
     def go_parent_directory(self):
-        path = Path(self.path_edit.text())
+        path = PurePosixPath(self.path_edit.text())
         parent = str(path.parent)
         if parent != self.path_edit.text():
             self.path_edit.setText(parent)
@@ -534,11 +534,8 @@ class ADBManager(QMainWindow):
             file_type = type_item.text()
 
             if file_type == "Directory":
-                path = self.path_edit.text()
-                # Prevent multiple slashes when navigating
-                if not path.endswith('/'):
-                    path += '/'
-                new_path = path + name
+                path = PurePosixPath(self.path_edit.text())
+                new_path = str(path / name)
                 self.path_edit.setText(new_path)
                 self.browse_device_path()
 
@@ -669,7 +666,7 @@ class ADBManager(QMainWindow):
 
         row = self.file_table.currentRow()
         filename = self.file_table.item(row, 0).text()
-        source = f"{self.path_edit.text()}/{filename}".replace('//', '/')
+        source = str(PurePosixPath(self.path_edit.text()) / filename)
 
         dest, _ = QFileDialog.getSaveFileName(None, "Save File", filename)
         if dest:
@@ -681,7 +678,7 @@ class ADBManager(QMainWindow):
     def push_file(self):
         source, _ = QFileDialog.getOpenFileName(None, "Select File")
         if source:
-            dest = f"{self.path_edit.text()}/{os.path.basename(source)}".replace('//', '/')
+            dest = str(PurePosixPath(self.path_edit.text()) / os.path.basename(source))
             try:
                 self.adb_core.push_file(source, dest, self.browse_device_path)
                 self.show_message("Success", "File pushed successfully")
@@ -701,7 +698,7 @@ class ADBManager(QMainWindow):
                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
 
         if reply == QMessageBox.StandardButton.Yes:
-            path = f"{self.path_edit.text()}/{filename}".replace('//', '/')
+            path = str(PurePosixPath(self.path_edit.text()) / filename)
             try:
                 self.adb_core.delete_file(path, self.browse_device_path)
                 self.show_message("Success", "File deleted successfully")
@@ -711,7 +708,7 @@ class ADBManager(QMainWindow):
     def create_directory(self):
         name, ok = QInputDialog.getText(None, "New Folder", "Folder name:")
         if ok and name:
-            path = f"{self.path_edit.text()}/{name}".replace('//', '/')
+            path = str(PurePosixPath(self.path_edit.text()) / name)
             try:
                 self.adb_core.create_directory(path, self.browse_device_path)
                 self.show_message("Success", "Folder created successfully")

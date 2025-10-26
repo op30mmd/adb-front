@@ -11,7 +11,6 @@ from adb_manager.adb_thread import ADBThread
 from adb_manager.logcat_thread import LogcatThread
 from PyQt6.QtCore import QObject, pyqtSignal
 import os
-import sys
 import threading
 import time
 
