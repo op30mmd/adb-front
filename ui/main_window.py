@@ -312,24 +312,25 @@ class ADBManager(QMainWindow):
         widget = QWidget()
         layout = QVBoxLayout(widget)
         
-        # Screen tools
-        screen_group = QGroupBox("Screen Tools")
-        screen_layout = QVBoxLayout()
-        
-        screen_btns = QHBoxLayout()
-        screenshot_btn = QPushButton("Screenshot")
+        # Screenshot tools
+        screenshot_group = QGroupBox("Screenshot")
+        screenshot_layout = QVBoxLayout()
+        screenshot_btn = QPushButton("Take Screenshot")
         screenshot_btn.setIcon(self.get_icon("media-record"))
         screenshot_btn.clicked.connect(self.take_screenshot)
-        screen_btns.addWidget(screenshot_btn)
+        screenshot_layout.addWidget(screenshot_btn)
+        screenshot_group.setLayout(screenshot_layout)
+        layout.addWidget(screenshot_group)
+
+        # Screenrecord tools
+        screenrecord_group = QGroupBox("Screen Record")
+        screenrecord_layout = QVBoxLayout()
         
-        screenrecord_btn = QPushButton("Screen Record")
+        screenrecord_btn = QPushButton("Start Recording")
         screenrecord_btn.setIcon(self.get_icon("media-record"))
         screenrecord_btn.clicked.connect(self.screen_record)
-        screen_btns.addWidget(screenrecord_btn)
+        screenrecord_layout.addWidget(screenrecord_btn)
         
-        screen_btns.addStretch()
-        screen_layout.addLayout(screen_btns)
-
         # Add screen record options
         record_options_layout = QHBoxLayout()
         record_options_layout.addWidget(QLabel("Resolution (e.g., 1280x720):"))
@@ -345,9 +346,9 @@ class ADBManager(QMainWindow):
         record_options_layout.addWidget(QLabel("Time Limit (s):"))
         self.time_limit_edit = QLineEdit("30")
         record_options_layout.addWidget(self.time_limit_edit)
-        screen_layout.addLayout(record_options_layout)
-        screen_group.setLayout(screen_layout)
-        layout.addWidget(screen_group)
+        screenrecord_layout.addLayout(record_options_layout)
+        screenrecord_group.setLayout(screenrecord_layout)
+        layout.addWidget(screenrecord_group)
         
         # Device control
         control_group = QGroupBox("Device Control")
