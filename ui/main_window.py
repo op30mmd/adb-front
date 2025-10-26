@@ -322,13 +322,30 @@ class ADBManager(QMainWindow):
         screenshot_btn.clicked.connect(self.take_screenshot)
         screen_btns.addWidget(screenshot_btn)
         
-        screenrecord_btn = QPushButton("Screen Record (30s)")
+        screenrecord_btn = QPushButton("Screen Record")
         screenrecord_btn.setIcon(self.get_icon("media-record"))
         screenrecord_btn.clicked.connect(self.screen_record)
         screen_btns.addWidget(screenrecord_btn)
         
         screen_btns.addStretch()
         screen_layout.addLayout(screen_btns)
+
+        # Add screen record options
+        record_options_layout = QHBoxLayout()
+        record_options_layout.addWidget(QLabel("Resolution (e.g., 1280x720):"))
+        self.resolution_edit = QLineEdit()
+        self.resolution_edit.setPlaceholderText("Default")
+        record_options_layout.addWidget(self.resolution_edit)
+
+        record_options_layout.addWidget(QLabel("Bitrate (e.g., 4M):"))
+        self.bitrate_edit = QLineEdit()
+        self.bitrate_edit.setPlaceholderText("Default")
+        record_options_layout.addWidget(self.bitrate_edit)
+
+        record_options_layout.addWidget(QLabel("Time Limit (s):"))
+        self.time_limit_edit = QLineEdit("30")
+        record_options_layout.addWidget(self.time_limit_edit)
+        screen_layout.addLayout(record_options_layout)
         screen_group.setLayout(screen_layout)
         layout.addWidget(screen_group)
         
@@ -773,15 +790,22 @@ class ADBManager(QMainWindow):
                 self.show_error(str(e))
 
     def screen_record(self):
+        resolution = self.resolution_edit.text()
+        bitrate = self.bitrate_edit.text()
+        time_limit = self.time_limit_edit.text()
+
         save_path, _ = QFileDialog.getSaveFileName(None, "Save Video", "screenrecord.mp4",
                                                 "MP4 Files (*.mp4)")
         if save_path:
-            self.show_message("Recording", "Recording for 30 seconds...")
             try:
-                if self.adb_core.screen_record(save_path):
+                time_limit_int = int(time_limit)
+                self.show_message("Recording", f"Recording for {time_limit} seconds...")
+                if self.adb_core.screen_record(save_path, resolution, bitrate, time_limit):
                     self.show_message("Success", "Screen recording saved")
                 else:
                     self.show_error("Failed to record screen. Please ensure the device is properly connected and that the application has storage permissions.")
+            except ValueError:
+                self.show_error("Invalid time limit. Please enter a valid number.")
             except RuntimeError as e:
                 self.show_error(str(e))
 

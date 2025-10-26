@@ -382,18 +382,30 @@ class ADBCore(QObject):
         except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
             raise RuntimeError(f"Failed to take screenshot: {e}")
                 
-    def screen_record(self, save_path):
+    def screen_record(self, save_path, resolution=None, bitrate=None, time_limit="30"):
         """Record screen"""
         if not self.current_device:
             raise RuntimeError("No device selected")
-            
+
         temp_path = "/sdcard/screenrecord.mp4"
 
         try:
+            record_cmd = ["shell", "screenrecord"]
+            if resolution:
+                record_cmd.extend(["--size", resolution])
+            if bitrate:
+                record_cmd.extend(["--bit-rate", bitrate])
+
+            record_cmd.extend(["--time-limit", time_limit])
+            record_cmd.append(temp_path)
+
+            # Timeout should be slightly longer than the recording time limit
+            timeout = int(time_limit) + 5
+
             creation_flags = 0
             if sys.platform == "win32":
                 creation_flags = subprocess.CREATE_NO_WINDOW
-            subprocess.run(self.get_adb_cmd("shell", "screenrecord", "--time-limit", "30", temp_path), timeout=35, check=True, creationflags=creation_flags)
+            subprocess.run(self.get_adb_cmd(*record_cmd), timeout=timeout, check=True, creationflags=creation_flags)
             subprocess.run(self.get_adb_cmd("pull", temp_path, save_path), timeout=30, check=True, creationflags=creation_flags)
             subprocess.run(self.get_adb_cmd("shell", "rm", temp_path), timeout=5, check=True, creationflags=creation_flags)
             return True
