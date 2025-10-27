@@ -514,6 +514,8 @@ class ADBManager(QMainWindow):
         path = PurePosixPath(self.path_edit.text())
         parent = str(path.parent)
         if parent != self.path_edit.text():
+            if not parent.endswith('/'):
+                parent += '/'
             self.path_edit.setText(parent)
             self.browse_device_path()
 
@@ -536,6 +538,8 @@ class ADBManager(QMainWindow):
             if file_type == "Directory":
                 path = PurePosixPath(self.path_edit.text())
                 new_path = str(path / name)
+                if not new_path.endswith('/'):
+                    new_path += '/'
                 self.path_edit.setText(new_path)
                 self.browse_device_path()
 

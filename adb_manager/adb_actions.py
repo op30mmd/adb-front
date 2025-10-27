@@ -2,6 +2,7 @@ import subprocess
 import os
 import re
 import sys
+import sys
 import shlex
 from pathlib import Path
 import logging
@@ -61,6 +62,7 @@ class ADBCore(QObject):
             raise RuntimeError(f"ADB not found at {self.adb_path}")
         self.shell_thread = None
         self.adb_command_thread = None
+        self.logcat_thread = None
 
         self.current_device = None
 
